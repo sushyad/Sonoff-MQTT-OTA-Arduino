@@ -7,7 +7,7 @@
 // Select hardware module:
 //   SONOFF         - Sonoff
 //   ELECTRO_DRAGON - Electro Dragon Relay 2 only
-#define MODULE                 SONOFF       // Either select SONOFF or ELECTRO_DRAGON
+#define MODULE                 ELECTRO_DRAGON       // Either select SONOFF or ELECTRO_DRAGON
 
 #define PROJECT                "sonoff"     // PROJECT is used as the default topic delimiter and OTA file name
                                             // As an IDE restriction it needs to be the same as the main .ino file
@@ -15,8 +15,8 @@
 #define CFG_HOLDER             0x20160520   // Change this value to load default configurations
 
 // Wifi
-#define STA_SSID               "indebuurt3"      // Wifi SSID
-#define STA_PASS               "VnsqrtnrsddbrN"  // Wifi password
+#define STA_SSID               "***REMOVED***"      // Wifi SSID
+#define STA_PASS               "***REMOVED***"  // Wifi password
 #define WIFI_HOSTNAME          "%s-%04d"         // Expands to <MQTT_TOPIC>-<last 4 decimal chars of MAC address>
 
 // Syslog
@@ -28,13 +28,13 @@
 
 // Ota
 #if (ARDUINO >= 168)
-  #define OTA_URL              "http://domus1:80/api/arduino/" PROJECT ".ino.bin"
+  #define OTA_URL              "http://yapiz-monster.local:80/api/arduino/" PROJECT ".ino.bin"
 #else
-  #define OTA_URL              "http://domus1:80/api/arduino/" PROJECT ".cpp.bin"
+  #define OTA_URL              "http://yapiz-monster.local:80/api/arduino/" PROJECT ".cpp.bin"
 #endif
 
 // MQTT
-#define MQTT_HOST              "domus1"
+#define MQTT_HOST              "192.168.0.3"
 #define MQTT_PORT              1883
 
 #define MQTT_CLIENT_ID         "DVES_%06X"  // Also fall back topic using Chip Id = last 6 characters of MAC address
@@ -60,18 +60,18 @@
 
 // Time - Up to three NTP servers in your region
 #define NTP_SERVER1            "pool.ntp.org"
-#define NTP_SERVER2            "nl.pool.ntp.org"
-#define NTP_SERVER3            "0.nl.pool.ntp.org"
+#define NTP_SERVER2            "north-america.pool.ntp.org"
+#define NTP_SERVER3            "0.north-america.pool.ntp.org"
 
 // Time - Start Daylight Saving Time and timezone offset from UTC in minutes
-#define TIME_DST               Last, Sun, Mar, 2, +120  // Last sunday in march at 02:00 +120 minutes
+#define TIME_DST               Second, Sun, Mar, 2, -240  // Second Sunday in march at 02:00 +60 minutes
 
 // Time - Start Standard Time and timezone offset from UTC in minutes
-#define TIME_STD               Last, Sun, Oct, 3, +60   // Last sunday in october 02:00 +60 minutes
+#define TIME_STD               First, Sun, Nov, 2, -300   // First Sunday in November 02:00 +0 minutes
 
 // Application
 #define MQTT_SUBTOPIC          "POWER"
-#define APP_TIMEZONE           1            // +1 hour (Amsterdam) (-12 .. 12 = hours from UTC, 99 = use TIME_DST/TIME_STD)
+#define APP_TIMEZONE           99            // +1 hour (Amsterdam) (-12 .. 12 = hours from UTC, 99 = use TIME_DST/TIME_STD)
 #define APP_POWER              0            // Saved power state Off
 #define APP_LEDSTATE           1            // Do not show power state (1 = Show power state)
 

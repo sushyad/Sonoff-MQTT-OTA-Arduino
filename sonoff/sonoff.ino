@@ -78,6 +78,9 @@ enum month_t {Jan=1, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec};
   #define DHT_PIN              14           // GPIO 14 = DHT22
   #define DHT_TYPE             DHT22        // DHT module type (DHT11, DHT21, DHT22, AM2301, AM2302 or AM2321)
   #define DSB_PIN              4            // GPIO 04 = DS18B20
+  #define HALLSENSOR1_PIN      5            // GPIO 05 = Hall sensor 1
+  #define HALLSENSOR_OPENSIDE   0
+  #define HALLSENSOR_CLOSEDSIDE 1  
   
 #else
   #error "Select either module SONOFF or ELECTRO_DRAGON"
@@ -98,6 +101,12 @@ enum month_t {Jan=1, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec};
 #define LOGSZ                  128          // Max number of characters in log string
 
 #define MAX_LOG_LINES          16
+
+#define STATUS_CLOSED        0
+#define STATUS_CLOSING       1
+#define STATUS_OPENING       2
+#define STATUS_OPEN          3
+#define STATUS_UNKNOWN       4
 
 enum butt_t {PRESSED, NOT_PRESSED};
 enum wifi_t {WIFI_STATUS, WIFI_SMARTCONFIG, WIFI_MANAGER};
@@ -148,6 +157,7 @@ struct SYSCFG {
   uint16_t      syslog_port;
   byte          weblog_level;
   uint16_t      tele_period;
+  uint8_t       relay2;
 } sysCfg;
 
 struct TIME_T {
@@ -204,6 +214,12 @@ uint8_t holdcount = 0;
 uint8_t multiwindow = 0;
 uint8_t multipress = 0;
 
+byte DOOR_STATUS;
+unsigned long lastStatusTimestamp=0;
+
+void setStatus(byte newSTATUS, boolean reportStatus=false);
+boolean hallSensorRead(byte which);
+
 /********************************************************************************************/
 
 void CFG_Default()
@@ -237,6 +253,7 @@ void CFG_Default()
   sysCfg.power = APP_POWER;
   sysCfg.ledstate = APP_LEDSTATE;
   sysCfg.webserver = WEB_SERVER;
+  sysCfg.relay2 = APP_POWER;
   CFG_Save();
 }
 
@@ -609,7 +626,7 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
       }
       snprintf_P(svalue, sizeof(svalue), PSTR("%d"), sysCfg.timezone);
     }
-    else if ((!strcmp(type,"LIGHT")) || (!strcmp(type,"POWER"))) {
+    else if ((!strcmp(type,"LIGHT")) || (!strcmp(type,"POWER")) || (!strcmp(type,"RELAY1"))) {
       snprintf_P(sysCfg.mqtt_subtopic, sizeof(sysCfg.mqtt_subtopic), PSTR("%s"), type);
       if ((data_len > 0) && (payload >= 0) && (payload <= 2)) {
         switch (payload) {
@@ -624,6 +641,22 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
         digitalWrite(REL_PIN, sysCfg.power);
       }
       strlcpy(svalue, (sysCfg.power) ? "On" : "Off", sizeof(svalue));
+    }
+    else if (!strcmp(type,"RELAY2")) {
+      snprintf_P(sysCfg.mqtt_subtopic, sizeof(sysCfg.mqtt_subtopic), PSTR("%s"), type);
+      if ((data_len > 0) && (payload >= 0) && (payload <= 2)) {
+        switch (payload) {
+        case 0: // Off
+        case 1: // On
+          sysCfg.relay2 = payload;
+          break;
+        case 2: // Toggle
+          sysCfg.relay2 ^= 1;
+          break;
+        }
+        digitalWrite(REL1_PIN, sysCfg.relay2);
+      }
+      strlcpy(svalue, (sysCfg.relay2) ? "On" : "Off", sizeof(svalue));
     }
     else if (!strcmp(type,"LEDSTATE")) {
       if ((data_len > 0) && (payload >= 0) && (payload <= 1)) {
@@ -986,7 +1019,20 @@ void setup()
   pinMode(REL_PIN, OUTPUT);
   digitalWrite(REL_PIN, sysCfg.power);
 
+  pinMode(REL1_PIN, OUTPUT);
+  digitalWrite(REL1_PIN, sysCfg.relay2);
+
   pinMode(KEY_PIN, INPUT_PULLUP);
+
+#ifdef MODULE == ELECTRO_DRAGON
+  pinMode(HALLSENSOR1_PIN, INPUT_PULLUP);
+
+  if (hallSensorRead(HALLSENSOR_OPENSIDE)==true)
+    setStatus(STATUS_OPEN);
+  if (hallSensorRead(HALLSENSOR_CLOSEDSIDE)==true)
+    setStatus(STATUS_CLOSED);
+  else setStatus(STATUS_UNKNOWN);
+#endif
 
 #ifdef SEND_TELEMETRY_DHT
   dht_init();
@@ -1011,6 +1057,16 @@ void loop()
 #ifdef USE_WEBSERVER
   pollDnsWeb();
 #endif  // USE_WEBSERVER
+
+#ifdef MODULE == ELECTRO_DRAGON
+  if (hallSensorRead(HALLSENSOR_OPENSIDE)==true)
+    setStatus(STATUS_OPEN, true);
+  else 
+    setStatus(STATUS_CLOSED, true);
+//  if (hallSensorRead(HALLSENSOR_CLOSEDSIDE)==true)
+//    setStatus(STATUS_CLOSED, false);
+
+#endif
 
   if (millis() >= timerxs) stateloop();
 

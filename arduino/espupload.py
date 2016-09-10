@@ -15,7 +15,7 @@ import optparse
 import logging
 import pycurl
 
-LOCALADDR = "domus1"
+LOCALADDR = "yapiz-monster.local"
 LOCALPORT = 80
 
 def upload(localAddr, localPort, filename):

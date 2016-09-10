@@ -1637,6 +1637,27 @@ void addLog_P(byte loglevel, const char *formatP)
   addLog(loglevel, mess);
 }
 
+//returns TRUE if magnet is next to sensor, FALSE if magnet is away
+boolean hallSensorRead(byte which)
+{
+  //byte reading = digitalRead(which ? HALLSENSOR2_PIN : HALLSENSOR1_PIN);
+  byte reading = digitalRead(HALLSENSOR1_PIN);
+  return reading==0;
+}
+
+void setStatus(byte newSTATUS, boolean reportIt)
+{
+  if (DOOR_STATUS != newSTATUS) {
+    lastStatusTimestamp = millis();
+    DOOR_STATUS = newSTATUS;
+    if (reportIt) {
+      char stopic[TOPSZ], svalue[MESSZ];
+      snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/INFO"), PUB_PREFIX, sysCfg.mqtt_topic);
+      strlcpy(svalue, (DOOR_STATUS) ? "On" : "Off", sizeof(svalue));
+      mqtt_publish(stopic, svalue);
+    }
+  }
+}
 /*********************************************************************************************\
  * 
 \*********************************************************************************************/
