@@ -1640,8 +1640,8 @@ void addLog_P(byte loglevel, const char *formatP)
 //returns TRUE if magnet is next to sensor, FALSE if magnet is away
 boolean hallSensorRead(byte which)
 {
-  //byte reading = digitalRead(which ? HALLSENSOR2_PIN : HALLSENSOR1_PIN);
-  byte reading = digitalRead(HALLSENSOR1_PIN);
+  byte reading = digitalRead(which ? HALLSENSOR12_PIN : HALLSENSOR11_PIN);
+  //byte reading = digitalRead(HALLSENSOR11_PIN);
   return reading==0;
 }
 
@@ -1653,7 +1653,7 @@ void setStatus(byte newSTATUS, boolean reportIt)
     if (reportIt) {
       char stopic[TOPSZ], svalue[MESSZ];
       snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/INFO"), PUB_PREFIX, sysCfg.mqtt_topic);
-      strlcpy(svalue, (DOOR_STATUS) ? "On" : "Off", sizeof(svalue));
+      strlcpy(svalue, (DOOR_STATUS  == STATUS_OPEN) ? "OPEN" : (DOOR_STATUS == STATUS_CLOSED) ? "CLOSED" : (DOOR_STATUS == STATUS_UNKNOWN) ? "UNKNOWN" : "UNDEFINED", sizeof(svalue));
       mqtt_publish(stopic, svalue);
     }
   }

@@ -7,7 +7,7 @@
 // Select hardware module:
 //   SONOFF         - Sonoff
 //   ELECTRO_DRAGON - Electro Dragon Relay 2 only
-#define MODULE                 ELECTRO_DRAGON       // Either select SONOFF or ELECTRO_DRAGON
+#define MODULE                 GARAGE       // Either select SONOFF or ELECTRO_DRAGON
 
 #define PROJECT                "sonoff"     // PROJECT is used as the default topic delimiter and OTA file name
                                             // As an IDE restriction it needs to be the same as the main .ino file

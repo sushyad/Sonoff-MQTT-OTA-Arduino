@@ -29,6 +29,7 @@
 
 #define SONOFF                 1
 #define ELECTRO_DRAGON         2
+#define GARAGE                 3
 
 enum log_t   {LOG_LEVEL_NONE, LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG, LOG_LEVEL_DEBUG_MORE, LOG_LEVEL_ALL};
 enum week_t  {Last, First, Second, Third, Fourth}; 
@@ -78,12 +79,23 @@ enum month_t {Jan=1, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec};
   #define DHT_PIN              14           // GPIO 14 = DHT22
   #define DHT_TYPE             DHT22        // DHT module type (DHT11, DHT21, DHT22, AM2301, AM2302 or AM2321)
   #define DSB_PIN              4            // GPIO 04 = DS18B20
-  #define HALLSENSOR1_PIN      5            // GPIO 05 = Hall sensor 1
+
+#elif MODULE == GARAGE              // programming header 5V/3V/gnd/
+  #define APP_NAME             "Garage module"
+  #define REL_PIN              12           // GPIO 12 = Red Led and Relay 2 (0 = Off, 1 = On)
+  #define REL1_PIN             13           // GPIO 13 = Red Led and Relay 1 (0 = Off, 1 = On)
+  #define HALLSENSOR11_PIN     4            // GPIO 05 = Hall sensor 1
+  #define HALLSENSOR12_PIN     5            // GPIO 05 = Hall sensor 1
+  #define HALLSENSOR21_PIN     14            // GPIO 05 = Hall sensor 1
+  #define HALLSENSOR22_PIN     16            // GPIO 05 = Hall sensor 1
+  #define KEY_PIN              0            // GPIO 00 = Button 2
+  #define KEY1_PIN             2            // GPIO 02 = Button 1
+  
   #define HALLSENSOR_OPENSIDE   0
   #define HALLSENSOR_CLOSEDSIDE 1  
   
 #else
-  #error "Select either module SONOFF or ELECTRO_DRAGON"
+  #error "Select either module SONOFF, ELECTRO_DRAGON or GARAGE"
 #endif
 
 /*********************************************************************************************\
@@ -837,6 +849,7 @@ void stateloop()
     }
   }
 
+#ifdef LED_PIN
   if (!(state % ((STATES/10)*2))) {
     if (blinks || restartflag || otaflag) {
       if (restartflag || otaflag)
@@ -849,6 +862,7 @@ void stateloop()
       if (sysCfg.ledstate) digitalWrite(LED_PIN, (LED_INVERTED) ? !sysCfg.power : sysCfg.power);
     }
   }
+#endif
   
   switch (state) {
   case (STATES/10)*2:
@@ -1013,8 +1027,10 @@ void setup()
   mqttClient.setServer(sysCfg.mqtt_host, sysCfg.mqtt_port);
   mqttClient.setCallback(mqttDataCb);
 
+#ifdef LED_PIN
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, (LED_INVERTED) ? !blinkstate : blinkstate);
+#endif
 
   pinMode(REL_PIN, OUTPUT);
   digitalWrite(REL_PIN, sysCfg.power);
@@ -1024,8 +1040,11 @@ void setup()
 
   pinMode(KEY_PIN, INPUT_PULLUP);
 
-#ifdef MODULE == ELECTRO_DRAGON
-  pinMode(HALLSENSOR1_PIN, INPUT_PULLUP);
+#ifdef MODULE == GARAGE
+  pinMode(HALLSENSOR11_PIN, INPUT_PULLUP);
+  pinMode(HALLSENSOR12_PIN, INPUT_PULLUP);
+  pinMode(HALLSENSOR21_PIN, INPUT_PULLUP);
+  pinMode(HALLSENSOR22_PIN, INPUT_PULLUP);
 
   if (hallSensorRead(HALLSENSOR_OPENSIDE)==true)
     setStatus(STATUS_OPEN);
@@ -1058,13 +1077,13 @@ void loop()
   pollDnsWeb();
 #endif  // USE_WEBSERVER
 
-#ifdef MODULE == ELECTRO_DRAGON
+#ifdef MODULE == GARAGE
   if (hallSensorRead(HALLSENSOR_OPENSIDE)==true)
     setStatus(STATUS_OPEN, true);
-  else 
+  else if (hallSensorRead(HALLSENSOR_CLOSEDSIDE)==true)
     setStatus(STATUS_CLOSED, true);
-//  if (hallSensorRead(HALLSENSOR_CLOSEDSIDE)==true)
-//    setStatus(STATUS_CLOSED, false);
+  else
+    setStatus(STATUS_UNKNOWN, true);
 
 #endif
 
