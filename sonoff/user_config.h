@@ -96,7 +96,27 @@
   #define DHT_TYPE             DHT22        // DHT module type (DHT11, DHT21, DHT22, AM2301, AM2302 or AM2321)
   #define DSB_PIN              4            // GPIO 04 = DS18B20
 
+#elif MODULE == GARAGE              // programming header 5V/3V/gnd/
+  #define APP_NAME             "Garage module"
+  #define REL_PIN              12           // GPIO 12 = Red Led and Relay 2 (0 = Off, 1 = On)
+  #define REL1_PIN             13           // GPIO 13 = Red Led and Relay 1 (0 = Off, 1 = On)
+  #define HALLSENSOR11_PIN     4            // GPIO 05 = Hall sensor 1
+  #define HALLSENSOR12_PIN     5            // GPIO 05 = Hall sensor 1
+  #define HALLSENSOR21_PIN     14            // GPIO 05 = Hall sensor 1
+  #define HALLSENSOR22_PIN     16            // GPIO 05 = Hall sensor 1
+  #define KEY_PIN              0            // GPIO 00 = Button 2
+  #define KEY1_PIN             2            // GPIO 02 = Button 1
+
+  #define HALLSENSOR_OPENSIDE   0
+  #define HALLSENSOR_CLOSEDSIDE 1
+
+  #define STATUS_CLOSED        0
+  #define STATUS_CLOSING       1
+  #define STATUS_OPENING       2
+  #define STATUS_OPEN          3
+  #define STATUS_UNKNOWN       4
+
 #else
-  #error "Select either module SONOFF or ELECTRO_DRAGON"
+  #error "Select either module SONOFF, ELECTRO_DRAGON or GARAGE"
 #endif
 
