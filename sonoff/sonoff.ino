@@ -29,8 +29,8 @@
 
 #define SONOFF                 1            // Sonoff, Sonoff TH10/16
 #define ELECTRO_DRAGON         2            // Electro Dragon Wifi IoT Relay Board Based on ESP8266
-#define GARAGE                 3
-
+#define ESP12F_2RELAYS_4SENSORS 3           // ESP12F with 2 relays and 4 digital inputs wired to 4 hall sensors for garage door inspired by Garagemote https://lowpowerlab.com/garagemote/
+                                            // This configuration controls two garage doors
 #define DHT11                  11
 #define DHT21                  21
 #define DHT22                  22
@@ -805,6 +805,7 @@ void stateloop()
     }
   }
 
+#ifdef LED_PIN
   if (!(state % ((STATES/10)*2))) {
     if (blinks || restartflag || otaflag) {
       if (restartflag || otaflag) {
@@ -818,7 +819,8 @@ void stateloop()
       if (sysCfg.ledstate) digitalWrite(LED_PIN, (LED_INVERTED) ? !sysCfg.power : sysCfg.power);
     }
   }
-  
+#endif
+
   switch (state) {
   case (STATES/10)*2:
     if (otaflag) {
@@ -989,8 +991,10 @@ void setup()
   mqttClient.setServer(sysCfg.mqtt_host, sysCfg.mqtt_port);
   mqttClient.setCallback(mqttDataCb);
 
+#ifdef LED_PIN
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, (LED_INVERTED) ? !blinkstate : blinkstate);
+#endif
 
   pinMode(REL_PIN, OUTPUT);
   digitalWrite(REL_PIN, sysCfg.power);
@@ -1001,7 +1005,7 @@ void setup()
   digitalWrite(REL1_PIN, sysCfg.relay2);
 
 
-#ifdef MODULE == GARAGE
+#ifdef MODULE == ESP12F_2RELAYS_4SENSORS
   pinMode(HALLSENSOR11_PIN, INPUT_PULLUP);
   pinMode(HALLSENSOR12_PIN, INPUT_PULLUP);
   pinMode(HALLSENSOR21_PIN, INPUT_PULLUP);
@@ -1038,7 +1042,7 @@ void loop()
   pollDnsWeb();
 #endif  // USE_WEBSERVER
 
-#ifdef MODULE == GARAGE
+#ifdef MODULE == ESP12F_2RELAYS_4SENSORS
   if (hallSensorRead(HALLSENSOR_OPENSIDE)==true)
     setStatus(STATUS_OPEN, true);
   else if (hallSensorRead(HALLSENSOR_CLOSEDSIDE)==true)

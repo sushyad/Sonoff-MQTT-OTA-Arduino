@@ -7,7 +7,7 @@
  *
 \*********************************************************************************************/
 
-#define MODULE                 GARAGE       // Hardware module type (SONOFF or ELECTRO_DRAGON)
+#define MODULE                 ESP12F_2RELAYS_4SENSORS       // Hardware module type (SONOFF or ELECTRO_DRAGON)
 
 #define PROJECT                "sonoff"     // PROJECT is used as the default topic delimiter and OTA file name
                                             // As an IDE restriction it needs to be the same as the main .ino file
@@ -96,7 +96,7 @@
   #define DHT_TYPE             DHT22        // DHT module type (DHT11, DHT21, DHT22, AM2301, AM2302 or AM2321)
   #define DSB_PIN              4            // GPIO 04 = DS18B20
 
-#elif MODULE == GARAGE              // programming header 5V/3V/gnd/
+#elif MODULE == ESP12F_2RELAYS_4SENSORS              // programming header 5V/3V/gnd/
   #define APP_NAME             "Garage module"
   #define REL_PIN              12           // GPIO 12 = Red Led and Relay 2 (0 = Off, 1 = On)
   #define REL1_PIN             13           // GPIO 13 = Red Led and Relay 1 (0 = Off, 1 = On)
@@ -117,6 +117,6 @@
   #define STATUS_UNKNOWN       4
 
 #else
-  #error "Select either module SONOFF, ELECTRO_DRAGON or GARAGE"
+  #error "Select either module SONOFF, ELECTRO_DRAGON or ESP12F_2RELAYS_4SENSORS"
 #endif
 
