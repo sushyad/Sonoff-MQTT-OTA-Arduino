@@ -25,16 +25,24 @@
  *                        | | | | | |                     Gnd
 */
 
-#define VERSION                0x01001E00   // 1.0.30
+#define VERSION                0x01002100   // 1.0.33
 
-#define SONOFF                 1
-#define ELECTRO_DRAGON         2
+#define SONOFF                 1            // Sonoff, Sonoff TH10/16
+#define ELECTRO_DRAGON         2            // Electro Dragon Wifi IoT Relay Board Based on ESP8266
 #define GARAGE                 3
+
+#define DHT11                  11
+#define DHT21                  21
+#define DHT22                  22
+#define AM2301                 21
+#define AM2302                 22
+#define AM2321                 22
 
 enum log_t   {LOG_LEVEL_NONE, LOG_LEVEL_ERROR, LOG_LEVEL_INFO, LOG_LEVEL_DEBUG, LOG_LEVEL_DEBUG_MORE, LOG_LEVEL_ALL};
 enum week_t  {Last, First, Second, Third, Fourth}; 
 enum dow_t   {Sun=1, Mon, Tue, Wed, Thu, Fri, Sat};
 enum month_t {Jan=1, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec};
+enum wifi_t  {WIFI_STATUS, WIFI_SMARTCONFIG, WIFI_MANAGER, WIFI_WPSCONFIG};
 
 #include "user_config.h"
 
@@ -46,17 +54,6 @@ enum month_t {Jan=1, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec};
 #define USE_TICKER                          // Enable interrupts to keep RTC synced during subscription flooding
 //#define USE_SPIFFS                          // Switch persistent configuration from flash to spiffs (+24k code, +0.6k mem)
 #define USE_WEBSERVER                       // Enable web server and wifi manager (+37k code, +2k mem)
-
-/*********************************************************************************************\
- * Optional parameters for both SONOFF and ELECTRO_DRAGON module
-\*********************************************************************************************/
-
-#define DHT11                  11
-#define DHT21                  21
-#define DHT22                  22
-#define AM2301                 21
-#define AM2302                 22
-#define AM2321                 22
 
 #if MODULE == SONOFF                        // programming header 1:3.3V 2:rx 3:tx 4:gnd
   #define APP_NAME             "Sonoff module"
@@ -93,7 +90,13 @@ enum month_t {Jan=1, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec};
   
   #define HALLSENSOR_OPENSIDE   0
   #define HALLSENSOR_CLOSEDSIDE 1  
-  
+
+  #define STATUS_CLOSED        0
+  #define STATUS_CLOSING       1
+  #define STATUS_OPENING       2
+  #define STATUS_OPEN          3
+  #define STATUS_UNKNOWN       4
+
 #else
   #error "Select either module SONOFF, ELECTRO_DRAGON or GARAGE"
 #endif
@@ -101,6 +104,9 @@ enum month_t {Jan=1, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec};
 /*********************************************************************************************\
  * No more user configurable items below
 \*********************************************************************************************/
+
+#define MQTT_SUBTOPIC          "POWER"      // Default MQTT subtopic (POWER or LIGHT)
+#define APP_POWER              0            // Default saved power state Off
 
 #define DEF_WIFI_HOSTNAME      "%s-%04d"    // Expands to <MQTT_TOPIC>-<last 4 decimal chars of MAC address>
 #define DEF_MQTT_CLIENT_ID     "DVES_%06X"  // Also fall back topic using Chip Id = last 6 characters of MAC address
@@ -114,14 +120,7 @@ enum month_t {Jan=1, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec};
 
 #define MAX_LOG_LINES          16
 
-#define STATUS_CLOSED        0
-#define STATUS_CLOSING       1
-#define STATUS_OPENING       2
-#define STATUS_OPEN          3
-#define STATUS_UNKNOWN       4
-
 enum butt_t {PRESSED, NOT_PRESSED};
-enum wifi_t {WIFI_STATUS, WIFI_SMARTCONFIG, WIFI_MANAGER};
 
 #include <ESP8266WiFi.h>        // MQTT, Ota, WifiManager
 #include <ESP8266HTTPClient.h>  // MQTT, Ota
@@ -169,6 +168,7 @@ struct SYSCFG {
   uint16_t      syslog_port;
   byte          weblog_level;
   uint16_t      tele_period;
+  uint8_t       sta_config;
   uint8_t       relay2;
 } sysCfg;
 
@@ -249,6 +249,7 @@ void CFG_Default()
   sysCfg.syslog_port = SYS_LOG_PORT;
   strlcpy(sysCfg.sta_ssid, STA_SSID, sizeof(sysCfg.sta_ssid));
   strlcpy(sysCfg.sta_pwd, STA_PASS, sizeof(sysCfg.sta_pwd));
+  sysCfg.sta_config = WIFI_CONFIG_TOOL;
   strlcpy(sysCfg.hostname, WIFI_HOSTNAME, sizeof(sysCfg.hostname));
   strlcpy(sysCfg.otaUrl, OTA_URL, sizeof(sysCfg.otaUrl));
   strlcpy(sysCfg.mqtt_host, MQTT_HOST, sizeof(sysCfg.mqtt_host));
@@ -419,8 +420,9 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
         if (payload == 0) mqtt_publish(stopic, svalue);
       }          
       if ((payload == 0) || (payload == 5)) {
-        snprintf_P(svalue, sizeof(svalue), PSTR("NET: Host %s, IP %s, Gateway %s, Subnetmask %s, Mac %s, Webserver %d"),
-          Hostname, WiFi.localIP().toString().c_str(), WiFi.gatewayIP().toString().c_str(), WiFi.subnetMask().toString().c_str(), WiFi.macAddress().c_str(), sysCfg.webserver);
+        snprintf_P(svalue, sizeof(svalue), PSTR("NET: Host %s, IP %s, Gateway %s, Subnetmask %s, Mac %s, Webserver %d, WifiConfig %d"),
+          Hostname, WiFi.localIP().toString().c_str(), WiFi.gatewayIP().toString().c_str(), WiFi.subnetMask().toString().c_str(),
+          WiFi.macAddress().c_str(), sysCfg.webserver, sysCfg.sta_config);
         if (payload == 0) mqtt_publish(stopic, svalue);
       }          
       if ((payload == 0) || (payload == 6)) {
@@ -437,9 +439,9 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
       if ((data_len > 0) && (payload == 1)) {
         otaflag = 3;
         snprintf_P(svalue, sizeof(svalue), PSTR("Upgrade %s from %s"), Version, sysCfg.otaUrl);
-      }
-      else
+      } else {
         snprintf_P(svalue, sizeof(svalue), PSTR("1 to upgrade"));
+      }
     }
     else if (!strcmp(type,"OTAURL")) {
       if ((data_len > 0) && (data_len < sizeof(sysCfg.otaUrl)))
@@ -493,16 +495,33 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
       }
       snprintf_P(svalue, sizeof(svalue), PSTR("%s"), sysCfg.hostname);
     }
+    else if (!strcmp(type,"WIFICONFIG") || !strcmp(type,"SMARTCONFIG")) {
+      if (data_len > 0) {
+        if (payload == 0) payload = sysCfg.sta_config;
+        if ((payload > 0) && (payload <= 3)) {
+          wificheckflag = payload;
+          sysCfg.sta_config = wificheckflag;
+          snprintf_P(svalue, sizeof(svalue), PSTR("%s selected"), (payload == WIFI_SMARTCONFIG) ? "Smartconfig" : (payload == WIFI_MANAGER) ? "Wifimanager" : "WPSconfig");
+          if (WIFI_State() != WIFI_STATUS) {
+            snprintf_P(svalue, sizeof(svalue), PSTR("%s on restart"), svalue);
+            restartflag = 2;
+          }
+        }
+      } else {
+        snprintf_P(svalue, sizeof(svalue), PSTR("1 to start smartconfig, 2 to start wifimanager, 3 to start wpsconfig. Default is %d"), sysCfg.sta_config);
+      }
+    }
 #ifdef USE_WEBSERVER
     else if (!strcmp(type,"WEBSERVER")) {
       if ((data_len > 0) && (payload >= 0) && (payload <= 2)) {
         sysCfg.webserver = payload;
       }
-      if (sysCfg.webserver)
+      if (sysCfg.webserver) {
         snprintf_P(svalue, sizeof(svalue), PSTR("Webserver active for %s on %s with IP address %s"),
           (sysCfg.webserver == 2) ? "Admin" : "User", Hostname, WiFi.localIP().toString().c_str());
-      else
+      } else {
         snprintf_P(svalue, sizeof(svalue), PSTR("Off"));
+      }
     }
     else if (!strcmp(type,"WEBLOG")) {
       if ((data_len > 0) && (payload >= LOG_LEVEL_NONE) && (payload <= LOG_LEVEL_ALL)) {
@@ -584,26 +603,6 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
       }
       snprintf_P(svalue, sizeof(svalue), PSTR("%s"), sysCfg.mqtt_topic2);
     }
-    else if (!strcmp(type,"SMARTCONFIG")) {
-      switch (payload) {
-      case 1:
-        if (WIFI_State() == WIFI_STATUS) {
-          wificheckflag = WIFI_SMARTCONFIG;
-          snprintf_P(svalue, sizeof(svalue), PSTR("Smartconfig started"));
-        } else
-          snprintf_P(svalue, sizeof(svalue), PSTR("Smartconfig or Wifimanager running"));
-        break;
-      case 2:
-        if (WIFI_State() == WIFI_STATUS) {
-          wificheckflag = WIFI_MANAGER;
-          snprintf_P(svalue, sizeof(svalue), PSTR("Wifimanager started"));
-        } else
-          snprintf_P(svalue, sizeof(svalue), PSTR("Smartconfig or Wifimanager running"));
-        break;
-      default:
-        snprintf_P(svalue, sizeof(svalue), PSTR("1 to start smartconfig, 2 to start wifimanager"));
-      }
-    }
     else if (!strcmp(type,"RESTART")) {
       switch (payload) {
       case 1: 
@@ -675,17 +674,16 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
         sysCfg.ledstate = payload;
       }
       strlcpy(svalue, (sysCfg.ledstate) ? "On" : "Off", sizeof(svalue));
-    }
-    else {
+    } else {
       type = NULL;
     }
     if (type == NULL) {
       blinks = 1;
       snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/SYNTAX"), PUB_PREFIX, sysCfg.mqtt_topic);
 #ifdef USE_WEBSERVER
-      snprintf_P(svalue, sizeof(svalue), PSTR("Status, Upgrade, Otaurl, Restart, Reset, Smartconfig, Seriallog, Weblog, Syslog, LogHost, LogPort, SSId, Password%s, Webserver"), (!grpflg) ? ", Hostname" : "");
+      snprintf_P(svalue, sizeof(svalue), PSTR("Status, Upgrade, Otaurl, Restart, Reset, WifiConfig, Seriallog, Weblog, Syslog, LogHost, LogPort, SSId, Password%s, Webserver"), (!grpflg) ? ", Hostname" : "");
 #else      
-      snprintf_P(svalue, sizeof(svalue), PSTR("Status, Upgrade, Otaurl, Restart, Reset, Smartconfig, Seriallog, Syslog, LogHost, LogPort, SSId, Password%s"), (!grpflg) ? ", Hostname" : "");
+      snprintf_P(svalue, sizeof(svalue), PSTR("Status, Upgrade, Otaurl, Restart, Reset, WifiConfig, Seriallog, Syslog, LogHost, LogPort, SSId, Password%s"), (!grpflg) ? ", Hostname" : "");
 #endif      
       mqtt_publish(stopic, svalue);
       snprintf_P(svalue, sizeof(svalue), PSTR("MqttHost, MqttPort, MqttUser, MqttPassword%s, GroupTopic, Timezone, Light, Power, Ledstate, TelePeriod"), (!grpflg) ? ", MqttClient, Topic, ButtonTopic" : "");
@@ -737,11 +735,17 @@ void every_second()
     
   if (sysCfg.tele_period) {
     tele_period++;
+    if (tele_period == sysCfg.tele_period -1) {
 
 #ifdef SEND_TELEMETRY_DS18B20
-    if (tele_period == sysCfg.tele_period -2) dsb_readTemperaturePrt1();
+      dsb_readTempPrep();
 #endif  // SEND_TELEMETRY_DS18B20
 
+#ifdef SEND_TELEMETRY_DHT
+      dht_readPrep();
+#endif  // SEND_TELEMETRY_DHT
+
+    }
     if (tele_period >= sysCfg.tele_period) {
       tele_period = 0;
 
@@ -752,8 +756,7 @@ void every_second()
 #endif  // SEND_TELEMETRY_UPTIME
 
 #ifdef SEND_TELEMETRY_DS18B20
-      t = dsb_readTemperaturePrt2();   // Read temperature as Celsius (the default)
-      if (!isnan(t)) {                 // Check if read failed
+      if (dsb_readTemp(t)) {                 // Check if read failed
         snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/TEMP"), PUB_PREFIX2, sysCfg.mqtt_topic);
         dtostrf(t, 1, 1, svalue);
         mqtt_publish(stopic, svalue);
@@ -761,9 +764,7 @@ void every_second()
 #endif  // SEND_TELEMETRY_DS18B20
 
 #ifdef SEND_TELEMETRY_DHT
-      h = dht_readHumidity(false);
-      t = dht_readTemperature(false, false); // Read temperature as Celsius (the default)
-      if (!isnan(h) && !isnan(t)) {          // Check if any reads failed
+      if (dht_readTempHum(false, t, h)) {     // Read temperature as Celsius (the default)
         snprintf_P(stopic, sizeof(stopic), PSTR("%s/%s/TEMP"), PUB_PREFIX2, sysCfg.mqtt_topic);
         dtostrf(t, 1, 1, svalue);
         mqtt_publish(stopic, svalue);
@@ -794,14 +795,15 @@ void every_second()
   }
 }
 
-const char commands[7][14] PROGMEM = {
+const char commands[8][14] PROGMEM = {
   {"reset 1"},        // Hold button for more than 4 seconds
   {"light 2"},        // Press button once
   {"light 2"},        // Press button twice
-  {"smartconfig 1"},  // Press button three times
-  {"smartconfig 2"},  // Press button four times
-  {"restart 1"},      // Press button five times
-  {"upgrade 1"}};     // Press button six times
+  {"wificonfig 1"},   // Press button three times
+  {"wificonfig 2"},   // Press button four times
+  {"wificonfig 3"},   // Press button five times
+  {"restart 1"},      // Press button six times
+  {"upgrade 1"}};     // Press button seven times
 
 void stateloop()
 {
@@ -849,20 +851,19 @@ void stateloop()
     }
   }
 
-#ifdef LED_PIN
   if (!(state % ((STATES/10)*2))) {
     if (blinks || restartflag || otaflag) {
-      if (restartflag || otaflag)
+      if (restartflag || otaflag) {
         blinkstate = 1;   // Stay lit
-      else
+      } else {
         blinkstate ^= 1;  // Blink
+      }
       digitalWrite(LED_PIN, (LED_INVERTED) ? !blinkstate : blinkstate);
       if (!blinkstate) blinks--;
     } else {
       if (sysCfg.ledstate) digitalWrite(LED_PIN, (LED_INVERTED) ? !sysCfg.power : sysCfg.power);
     }
   }
-#endif
   
   switch (state) {
   case (STATES/10)*2:
@@ -911,10 +912,11 @@ void stateloop()
     break;
   case (STATES/10)*8:
     if ((WiFi.status() == WL_CONNECTED) && (!mqttClient.connected())) {
-      if (!mqttcounter)
+      if (!mqttcounter) {
         mqtt_reconnect();
-      else
+      } else {
         mqttcounter--;
+      }
     }
     break;
   }
@@ -941,10 +943,11 @@ void serial()
     }
     if (isprint(SerialInByte))
     {
-      if (SerialInByteCounter < INPUT_BUFFER_SIZE) // add char to string if it still fits
+      if (SerialInByteCounter < INPUT_BUFFER_SIZE) { // add char to string if it still fits
         serialInBuf[SerialInByteCounter++] = SerialInByte;
-      else
+      } else {
         SerialInByteCounter = 0;
+      }
     }
     if (SerialInByte == '\n')
     {
@@ -961,7 +964,7 @@ void serial()
 
 void setup()
 {
-  char log[128];
+  char log[LOGSZ];
   byte idx;
 
   Serial.begin(115200);
@@ -1005,7 +1008,10 @@ void setup()
     if (sysCfg.version < 0x01001C00) {  // 1.0.28 - Add telemetry parameter
       sysCfg.tele_period = TELE_PERIOD;
     }
-    
+    if (sysCfg.version < 0x01002000) {  // 1.0.32 - Add default Wifi config
+      sysCfg.sta_config = WIFI_CONFIG_TOOL;
+    }
+
     sysCfg.version = VERSION;
   }
   sysCfg.bootcount++;
@@ -1013,32 +1019,33 @@ void setup()
   addLog(LOG_LEVEL_DEBUG, log);
 
   if (strstr(sysCfg.hostname, "%")) strlcpy(sysCfg.hostname, DEF_WIFI_HOSTNAME, sizeof(sysCfg.hostname));
-  if (!strcmp(sysCfg.hostname, DEF_WIFI_HOSTNAME))
+  if (!strcmp(sysCfg.hostname, DEF_WIFI_HOSTNAME)) {
     snprintf_P(Hostname, sizeof(Hostname)-1, sysCfg.hostname, sysCfg.mqtt_topic, ESP.getChipId() & 0x1FFF);
-  else
+  } else {
     snprintf_P(Hostname, sizeof(Hostname)-1, sysCfg.hostname);
+  }
   WIFI_Connect(Hostname);
 
   if (strstr(sysCfg.mqtt_client, "%")) strlcpy(sysCfg.mqtt_client, DEF_MQTT_CLIENT_ID, sizeof(sysCfg.mqtt_client));
-  if (!strcmp(sysCfg.mqtt_client, DEF_MQTT_CLIENT_ID))
+  if (!strcmp(sysCfg.mqtt_client, DEF_MQTT_CLIENT_ID)) {
     snprintf_P(MQTTClient, sizeof(MQTTClient), sysCfg.mqtt_client, ESP.getChipId());
-  else
+  } else {
     snprintf_P(MQTTClient, sizeof(MQTTClient), sysCfg.mqtt_client);
+  }
   mqttClient.setServer(sysCfg.mqtt_host, sysCfg.mqtt_port);
   mqttClient.setCallback(mqttDataCb);
 
-#ifdef LED_PIN
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, (LED_INVERTED) ? !blinkstate : blinkstate);
-#endif
 
   pinMode(REL_PIN, OUTPUT);
   digitalWrite(REL_PIN, sysCfg.power);
 
+  pinMode(KEY_PIN, INPUT_PULLUP);
+
   pinMode(REL1_PIN, OUTPUT);
   digitalWrite(REL1_PIN, sysCfg.relay2);
 
-  pinMode(KEY_PIN, INPUT_PULLUP);
 
 #ifdef MODULE == GARAGE
   pinMode(HALLSENSOR11_PIN, INPUT_PULLUP);
