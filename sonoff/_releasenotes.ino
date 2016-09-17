@@ -1,4 +1,22 @@
-/* 1.0.30
+/* 1.0.33 20160915
+ * Better WPS error message
+ * Separate webserver code from support.ino into webserver.ino
+ * Fix webserver User by removing unwanted restart option
+ * 
+ * 1.0.32 20160913
+ * Add Wifi Protected Setup (WPS) as third option for initial config
+ * Add command WIFICONFIG replacing deprecated command SMARTCONFIG
+ * Add option WIFICONFIG 3 to start WPSconfig
+ * Add option WIFICONFIG 0 to start saved Wifi config tool (WPSconfig, Smartconfig or Wifimanager)
+ * Change button behaviour - See Wiki 
+ * 
+ * 1.0.31 20160907
+ * Fix DS18B20 misread if teleperiod = 2
+ * Tuned sensor code
+ * Updated prefered ElectroDragon connection to Relay 1 and Button 1 
+ * Moved SONOFF and ELECTRO_DRAGON port config to user_config.h
+ * 
+ * 1.0.30 20160902
  * Fix command TELEPERIOD 0
  * Add ESP- tag to UDP log message for easy rsyslogd filtering
  * Add ElectroDragon (Relay 2 only) functionality. Select with #define MODULE ELECTRO_DRAGON

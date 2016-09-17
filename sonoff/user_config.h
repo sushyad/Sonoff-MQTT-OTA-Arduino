@@ -1,13 +1,13 @@
-/* 
- * user_config.h
- * 
+/*********************************************************************************************\
  * User specific configuration parameters
- */
+ *
+ * Select hardware MODULE:
+ *  SONOFF          = Sonoff, Sonoff TH 10A and Sonoff TH 16A
+ *  ELECTRO_DRAGON  = Electro Dragon (Relay 2 only)
+ *
+\*********************************************************************************************/
 
-// Select hardware module:
-//   SONOFF         - Sonoff
-//   ELECTRO_DRAGON - Electro Dragon Relay 2 only
-#define MODULE                 GARAGE       // Either select SONOFF or ELECTRO_DRAGON
+#define MODULE                 GARAGE       // Hardware module type (SONOFF or ELECTRO_DRAGON)
 
 #define PROJECT                "sonoff"     // PROJECT is used as the default topic delimiter and OTA file name
                                             // As an IDE restriction it needs to be the same as the main .ino file
@@ -15,9 +15,10 @@
 #define CFG_HOLDER             0x20160520   // Change this value to load default configurations
 
 // Wifi
-#define STA_SSID               "***REMOVED***"      // Wifi SSID
-#define STA_PASS               "***REMOVED***"  // Wifi password
+#define STA_SSID               "WIFI_SSID"      // Wifi SSID
+#define STA_PASS               "WIFI_PASSWORD"  // Wifi password
 #define WIFI_HOSTNAME          "%s-%04d"         // Expands to <MQTT_TOPIC>-<last 4 decimal chars of MAC address>
+#define WIFI_CONFIG_TOOL       WIFI_WPSCONFIG    // Default tool if wifi fails to connect (WIFI_SMARTCONFIG, WIFI_MANAGER or WIFI_WPSCONFIG)
 
 // Syslog
 #define SYS_LOG_HOST           "domus1"
@@ -28,13 +29,13 @@
 
 // Ota
 #if (ARDUINO >= 168)
-  #define OTA_URL              "http://yapiz-monster.local:80/api/arduino/" PROJECT ".ino.bin"
+  #define OTA_URL              "http://domus1:80/api/arduino/" PROJECT ".ino.bin"
 #else
-  #define OTA_URL              "http://yapiz-monster.local:80/api/arduino/" PROJECT ".cpp.bin"
+  #define OTA_URL              "http://domus1:80/api/arduino/" PROJECT ".cpp.bin"
 #endif
 
 // MQTT
-#define MQTT_HOST              "192.168.0.3"
+#define MQTT_HOST              "domus1"
 #define MQTT_PORT              1883
 
 #define MQTT_CLIENT_ID         "DVES_%06X"  // Also fall back topic using Chip Id = last 6 characters of MAC address
@@ -70,8 +71,32 @@
 #define TIME_STD               First, Sun, Nov, 2, -300   // First Sunday in November 02:00 +0 minutes
 
 // Application
-#define MQTT_SUBTOPIC          "POWER"
-#define APP_TIMEZONE           99            // +1 hour (Amsterdam) (-12 .. 12 = hours from UTC, 99 = use TIME_DST/TIME_STD)
-#define APP_POWER              0            // Saved power state Off
+#define APP_TIMEZONE           99           // +1 hour (Amsterdam) (-12 .. 12 = hours from UTC, 99 = use TIME_DST/TIME_STD)
 #define APP_LEDSTATE           1            // Do not show power state (1 = Show power state)
+
+#if MODULE == SONOFF                        // programming header 1:3.3V 2:rx 3:tx 4:gnd
+  #define APP_NAME             "Sonoff module"
+  #define LED_PIN              13           // GPIO 13 = Green Led (0 = On, 1 = Off) - Sonoff
+  #define LED_INVERTED         1            // 0 = (1 = On, 0 = Off), 1 = (0 = On, 1 = Off)
+  #define REL_PIN              12           // GPIO 12 = Red Led and Relay (0 = Off, 1 = On)
+  #define KEY_PIN              0            // GPIO 00 = Button
+  #define DHT_PIN              14           // GPIO 14 = TEM1 - DHT22 (Sonoff_TH10A(16A))
+  #define DHT_TYPE             DHT11        // DHT module type (DHT11, DHT21, DHT22, AM2301, AM2302 or AM2321)
+  #define DSB_PIN              4            // GPIO 04 = TEM2 - DS18B20 (Sonoff_TH10A(16A))
+
+#elif MODULE == ELECTRO_DRAGON              // programming header 5V/3V/gnd/
+  #define APP_NAME             "ElectroDragon module"
+  #define LED_PIN              16           // GPIO 16 = Led (0 = Off, 1 = On)
+  #define LED_INVERTED         0            // 0 = (1 = On, 0 = Off), 1 = (0 = On, 1 = Off)
+  #define REL_PIN              13           // GPIO 13 = Red Led and Relay 1 (0 = Off, 1 = On)
+  #define KEY_PIN              2            // GPIO 02 = Button 1
+  #define REL2_PIN             12           // GPIO 12 = Red Led and Relay 2 (0 = Off, 1 = On)
+  #define KEY2_PIN             0            // GPIO 00 = Button 2
+  #define DHT_PIN              14           // GPIO 14 = DHT22
+  #define DHT_TYPE             DHT22        // DHT module type (DHT11, DHT21, DHT22, AM2301, AM2302 or AM2321)
+  #define DSB_PIN              4            // GPIO 04 = DS18B20
+
+#else
+  #error "Select either module SONOFF or ELECTRO_DRAGON"
+#endif
 

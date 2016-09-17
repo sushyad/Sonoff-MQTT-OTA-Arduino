@@ -55,52 +55,6 @@ enum wifi_t  {WIFI_STATUS, WIFI_SMARTCONFIG, WIFI_MANAGER, WIFI_WPSCONFIG};
 //#define USE_SPIFFS                          // Switch persistent configuration from flash to spiffs (+24k code, +0.6k mem)
 #define USE_WEBSERVER                       // Enable web server and wifi manager (+37k code, +2k mem)
 
-#if MODULE == SONOFF                        // programming header 1:3.3V 2:rx 3:tx 4:gnd
-  #define APP_NAME             "Sonoff module"
-  #define LED_PIN              13           // GPIO 13 = Green Led (0 = On, 1 = Off) - Sonoff
-  #define LED_INVERTED         1            // 0 = (1 = On, 0 = Off), 1 = (0 = On, 1 = Off)
-  #define REL_PIN              12           // GPIO 12 = Red Led and Relay (0 = Off, 1 = On)
-  #define KEY_PIN              0            // GPIO 00 = Button
-  #define DHT_PIN              14           // GPIO 14 = TEM1 - DHT22
-  #define DHT_TYPE             DHT11        // DHT module type (DHT11, DHT21, DHT22, AM2301, AM2302 or AM2321)
-  #define DSB_PIN              4            // GPIO 04 = TEM2 - DS18B20
-  
-#elif MODULE == ELECTRO_DRAGON              // programming header 5V/3V/gnd/
-  #define APP_NAME             "ElectroDragon module"
-  #define LED_PIN              16           // GPIO 16 = Led (0 = Off, 1 = On)
-  #define LED_INVERTED         0            // 0 = (1 = On, 0 = Off), 1 = (0 = On, 1 = Off)
-  #define REL_PIN              12           // GPIO 12 = Red Led and Relay 2 (0 = Off, 1 = On)
-  #define KEY_PIN              0            // GPIO 00 = Button 2
-  #define REL1_PIN             13           // GPIO 13 = Red Led and Relay 1 (0 = Off, 1 = On)
-  #define KEY1_PIN             2            // GPIO 02 = Button 1
-  #define DHT_PIN              14           // GPIO 14 = DHT22
-  #define DHT_TYPE             DHT22        // DHT module type (DHT11, DHT21, DHT22, AM2301, AM2302 or AM2321)
-  #define DSB_PIN              4            // GPIO 04 = DS18B20
-
-#elif MODULE == GARAGE              // programming header 5V/3V/gnd/
-  #define APP_NAME             "Garage module"
-  #define REL_PIN              12           // GPIO 12 = Red Led and Relay 2 (0 = Off, 1 = On)
-  #define REL1_PIN             13           // GPIO 13 = Red Led and Relay 1 (0 = Off, 1 = On)
-  #define HALLSENSOR11_PIN     4            // GPIO 05 = Hall sensor 1
-  #define HALLSENSOR12_PIN     5            // GPIO 05 = Hall sensor 1
-  #define HALLSENSOR21_PIN     14            // GPIO 05 = Hall sensor 1
-  #define HALLSENSOR22_PIN     16            // GPIO 05 = Hall sensor 1
-  #define KEY_PIN              0            // GPIO 00 = Button 2
-  #define KEY1_PIN             2            // GPIO 02 = Button 1
-  
-  #define HALLSENSOR_OPENSIDE   0
-  #define HALLSENSOR_CLOSEDSIDE 1  
-
-  #define STATUS_CLOSED        0
-  #define STATUS_CLOSING       1
-  #define STATUS_OPENING       2
-  #define STATUS_OPEN          3
-  #define STATUS_UNKNOWN       4
-
-#else
-  #error "Select either module SONOFF, ELECTRO_DRAGON or GARAGE"
-#endif
-
 /*********************************************************************************************\
  * No more user configurable items below
 \*********************************************************************************************/
