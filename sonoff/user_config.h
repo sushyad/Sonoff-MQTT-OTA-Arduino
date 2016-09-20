@@ -9,7 +9,7 @@
 
 #define MODULE                 ESP12F_2RELAYS_4SENSORS       // Hardware module type (SONOFF or ELECTRO_DRAGON)
 
-#define PROJECT                "sonoff"     // PROJECT is used as the default topic delimiter and OTA file name
+#define PROJECT                "garage"     // PROJECT is used as the default topic delimiter and OTA file name
                                             // As an IDE restriction it needs to be the same as the main .ino file
                                             
 #define CFG_HOLDER             0x20160520   // Change this value to load default configurations

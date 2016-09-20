@@ -864,6 +864,7 @@ void addLog_P(byte loglevel, const char *formatP)
   addLog(loglevel, mess);
 }
 
+#if MODULE == ESP12F_2RELAYS_4SENSORS
 //returns TRUE if magnet is next to sensor, FALSE if magnet is away
 boolean hallSensorRead(byte which)
 {
@@ -885,6 +886,7 @@ void setStatus(byte newSTATUS, boolean reportIt)
     }
   }
 }
+#endif
 /*********************************************************************************************\
  * 
 \*********************************************************************************************/

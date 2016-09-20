@@ -25,7 +25,7 @@
  *                        | | | | | |                     Gnd
 */
 
-#define VERSION                0x01002100   // 1.0.33
+#define VERSION                0x01002400   // 1.0.36
 
 #define SONOFF                 1            // Sonoff, Sonoff TH10/16
 #define ELECTRO_DRAGON         2            // Electro Dragon Wifi IoT Relay Board Based on ESP8266
@@ -593,36 +593,54 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
     }
     else if ((!strcmp(type,"LIGHT")) || (!strcmp(type,"POWER")) || (!strcmp(type,"RELAY1"))) {
       snprintf_P(sysCfg.mqtt_subtopic, sizeof(sysCfg.mqtt_subtopic), PSTR("%s"), type);
-      if ((data_len > 0) && (payload >= 0) && (payload <= 2)) {
+      if ((data_len > 0) && (payload >= 0) && (payload <= 3)) {
         switch (payload) {
         case 0: // Off
+          sysCfg.power = 1; //these relays are reversed
+          break;
         case 1: // On
-          sysCfg.power = payload;
+          sysCfg.power = 0;
           break;
         case 2: // Toggle
           sysCfg.power ^= 1;
+          break;
+        case 3: // Momentary switch
+          sysCfg.power = 0;
+          digitalWrite(REL_PIN, sysCfg.power);
+          delay(100);
+          sysCfg.power = 1;
           break;
         }
         digitalWrite(REL_PIN, sysCfg.power);
       }
       strlcpy(svalue, (sysCfg.power) ? "On" : "Off", sizeof(svalue));
     }
+#ifdef RELAY2
     else if (!strcmp(type,"RELAY2")) {
       snprintf_P(sysCfg.mqtt_subtopic, sizeof(sysCfg.mqtt_subtopic), PSTR("%s"), type);
-      if ((data_len > 0) && (payload >= 0) && (payload <= 2)) {
+      if ((data_len > 0) && (payload >= 0) && (payload <= 3)) {
         switch (payload) {
         case 0: // Off
+          sysCfg.power = 1; //these relays are reversed
+          break;
         case 1: // On
-          sysCfg.relay2 = payload;
+          sysCfg.power = 0;
           break;
         case 2: // Toggle
           sysCfg.relay2 ^= 1;
+          break;
+        case 3: // Momentary switch
+          sysCfg.relay2 = 0;
+          digitalWrite(REL1_PIN, sysCfg.relay2);
+          delay(100);
+          sysCfg.relay2 = 1;
           break;
         }
         digitalWrite(REL1_PIN, sysCfg.relay2);
       }
       strlcpy(svalue, (sysCfg.relay2) ? "On" : "Off", sizeof(svalue));
     }
+#endif
     else if (!strcmp(type,"LEDSTATE")) {
       if ((data_len > 0) && (payload >= 0) && (payload <= 1)) {
         sysCfg.ledstate = payload;
@@ -1001,11 +1019,12 @@ void setup()
 
   pinMode(KEY_PIN, INPUT_PULLUP);
 
+#ifdef REL1_PIN
   pinMode(REL1_PIN, OUTPUT);
   digitalWrite(REL1_PIN, sysCfg.relay2);
+#endif
 
-
-#ifdef MODULE == ESP12F_2RELAYS_4SENSORS
+#if MODULE == ESP12F_2RELAYS_4SENSORS
   pinMode(HALLSENSOR11_PIN, INPUT_PULLUP);
   pinMode(HALLSENSOR12_PIN, INPUT_PULLUP);
   pinMode(HALLSENSOR21_PIN, INPUT_PULLUP);
@@ -1042,7 +1061,7 @@ void loop()
   pollDnsWeb();
 #endif  // USE_WEBSERVER
 
-#ifdef MODULE == ESP12F_2RELAYS_4SENSORS
+#if MODULE == ESP12F_2RELAYS_4SENSORS
   if (hallSensorRead(HALLSENSOR_OPENSIDE)==true)
     setStatus(STATUS_OPEN, true);
   else if (hallSensorRead(HALLSENSOR_CLOSEDSIDE)==true)
