@@ -60,7 +60,12 @@ enum wifi_t  {WIFI_STATUS, WIFI_SMARTCONFIG, WIFI_MANAGER, WIFI_WPSCONFIG};
 \*********************************************************************************************/
 
 #define MQTT_SUBTOPIC          "POWER"      // Default MQTT subtopic (POWER or LIGHT)
+
+#if module == ESP12F_2RELAYS_4SENSORS
+#define APP_POWER              1            // Default saved power state Off but garage relay is reversed
+#else 
 #define APP_POWER              0            // Default saved power state Off
+#endif
 
 #define DEF_WIFI_HOSTNAME      "%s-%04d"    // Expands to <MQTT_TOPIC>-<last 4 decimal chars of MAC address>
 #define DEF_MQTT_CLIENT_ID     "DVES_%06X"  // Also fall back topic using Chip Id = last 6 characters of MAC address
@@ -615,7 +620,7 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
       }
       strlcpy(svalue, (sysCfg.power) ? "On" : "Off", sizeof(svalue));
     }
-#ifdef RELAY2
+#if MODULE == ESP12F_2RELAYS_4SENSORS
     else if (!strcmp(type,"RELAY2")) {
       snprintf_P(sysCfg.mqtt_subtopic, sizeof(sysCfg.mqtt_subtopic), PSTR("%s"), type);
       if ((data_len > 0) && (payload >= 0) && (payload <= 3)) {
