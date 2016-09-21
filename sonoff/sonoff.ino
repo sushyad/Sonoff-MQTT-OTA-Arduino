@@ -73,6 +73,22 @@ enum wifi_t  {WIFI_STATUS, WIFI_SMARTCONFIG, WIFI_MANAGER, WIFI_WPSCONFIG};
 
 #define MAX_LOG_LINES          16
 
+/*
+ * Change the defined MQTT packet size and keepalive
+ * to larger values, as recommended by Theo.
+ *
+ * Note that the PubSubClient library should be included
+ * -after- these redefines, not before.
+ */
+#ifdef MQTT_MAX_PACKET_SIZE
+	#undef MQTT_MAX_PACKET_SIZE
+#endif
+#define MQTT_MAX_PACKET_SIZE 1024
+#ifdef MQTT_KEEPALIVE
+	#undef MQTT_KEEPALIVE
+#endif
+#define MQTT_KEEPALIVE 120
+
 enum butt_t {PRESSED, NOT_PRESSED};
 
 #include <ESP8266WiFi.h>        // MQTT, Ota, WifiManager
