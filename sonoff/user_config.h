@@ -7,9 +7,9 @@
  *
 \*********************************************************************************************/
 
-#define MODULE                 ESP12F_2RELAYS_4SENSORS       // Hardware module type (SONOFF or ELECTRO_DRAGON)
+#define MODULE                 SONOFF       // Hardware module type (SONOFF or ELECTRO_DRAGON)
 
-#define PROJECT                "garage"     // PROJECT is used as the default topic delimiter and OTA file name
+#define PROJECT                "sonoff"     // PROJECT is used as the default topic delimiter and OTA file name
                                             // As an IDE restriction it needs to be the same as the main .ino file
                                             
 #define CFG_HOLDER             0x20160520   // Change this value to load default configurations
@@ -26,6 +26,7 @@
 #define SYS_LOG_LEVEL          LOG_LEVEL_NONE
 #define SERIAL_LOG_LEVEL       LOG_LEVEL_INFO
 #define WEB_LOG_LEVEL          LOG_LEVEL_INFO
+#define LIGHT_SWITCH_PRESENT
 
 // Ota
 #if (ARDUINO >= 168)
@@ -83,6 +84,9 @@
   #define DHT_PIN              14           // GPIO 14 = TEM1 - DHT22 (Sonoff_TH10A(16A))
   #define DHT_TYPE             DHT11        // DHT module type (DHT11, DHT21, DHT22, AM2301, AM2302 or AM2321)
   #define DSB_PIN              4            // GPIO 04 = TEM2 - DS18B20 (Sonoff_TH10A(16A))
+  #ifdef LIGHT_SWITCH_PRESENT
+    #define SWITCH_PIN         14           // GPIO 14 - traditional light switch
+  #endif
 
 #elif MODULE == ELECTRO_DRAGON              // programming header 5V/3V/gnd/
   #define APP_NAME             "ElectroDragon module"
