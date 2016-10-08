@@ -25,7 +25,7 @@
  *                        | | | | | |                     Gnd
 */
 
-#define VERSION                0x02000200   // 2.0.2
+#define VERSION                0x02000300   // 2.0.3
 
 #define SONOFF                 1            // Sonoff, Sonoff Dual, Sonoff TH10/16
 #define ELECTRO_DRAGON         3            // Electro Dragon Wifi IoT Relay Board Based on ESP8266
@@ -257,11 +257,11 @@ void CFG_Default()
 
 /********************************************************************************************/
 
-void mqtt_publish(const char* topic, const char* data)
+void mqtt_publish(const char* topic, const char* data, boolean retained = false)
 {
   char log[TOPSZ+MESSZ];
   
-  mqttClient.publish(topic, data);
+  mqttClient.publish(topic, data, retained);
   snprintf_P(log, sizeof(log), PSTR("MQTT: %s = %s"), strchr(topic,'/')+1, data); // Skip topic prefix
   addLog(LOG_LEVEL_INFO, log);
 //  mqttClient.loop();  // Do not use here! Will block previous publishes
@@ -327,6 +327,7 @@ void mqtt_reconnect()
 
 void mqttDataCb(char* topic, byte* data, unsigned int data_len)
 {
+  boolean retained = false;
   int i, grpflg = 0, device;
   char *str, *p, *mtopic = NULL, *type = NULL, *devc = NULL;
   char stopic[TOPSZ], svalue[MESSZ];
@@ -655,6 +656,7 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
       snprintf_P(svalue, sizeof(svalue), PSTR("%d"), sysCfg.timezone);
     }
     else if ((!strcmp(type,"LIGHT")) || (!strcmp(type,"POWER"))) {
+      retained = true;
       snprintf_P(sysCfg.mqtt_subtopic, sizeof(sysCfg.mqtt_subtopic), PSTR("%s"), type);
       if ((data_len > 0) && (payload >= 0) && (payload <= 2)) {
         switch (payload) {
@@ -693,6 +695,7 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
     }
 #if MODULE == ESP12F_2RELAYS_4SENSORS
     else if (!strcmp(type, "RELAY2")) {
+      retained = true;
       snprintf_P(sysCfg.mqtt_subtopic, sizeof(sysCfg.mqtt_subtopic), PSTR("%s"), type);
       if ((data_len > 0) && (payload >= 0) && (payload <= 3)) {
         switch (payload) {
@@ -737,7 +740,7 @@ void mqttDataCb(char* topic, byte* data, unsigned int data_len)
     mqtt_publish(stopic, svalue);
     snprintf_P(svalue, sizeof(svalue), PSTR("MqttHost, MqttPort, MqttUser, MqttPassword%s, GroupTopic, Timezone, Light, Power, Ledstate, TelePeriod"), (!grpflg) ? ", MqttClient, Topic, ButtonTopic" : "");
   }
-  mqtt_publish(stopic, svalue);
+  mqtt_publish(stopic, svalue, retained);
 }
 
 /********************************************************************************************/
@@ -950,8 +953,9 @@ void stateloop()
 
       if (switchCount > 1) {
         actionTaken = true;
-        snprintf_P(scmnd, sizeof(scmnd), "light 2");
-        send_button(scmnd);          // Execute command via MQTT using ButtonTopic to sync external clients
+        snprintf_P(scmnd, sizeof(scmnd), commands[1]);
+        do_cmnd(scmnd);              // Execute command internally 
+        //send_button(scmnd);          // Execute command via MQTT using ButtonTopic to sync external clients
       }
     }
   }
