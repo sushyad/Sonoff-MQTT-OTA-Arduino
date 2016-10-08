@@ -1,4 +1,23 @@
-/* 1.0.33 20160915
+/* 2.0.2 20161006 
+ * Fix wifi issue 2186 
+ * 
+ * 2.0.1 20161002
+ * Fix button press
+ * 
+ * 2.0.0 20161002
+ * Update Sonoff TH10/16 sensor pins (My TH10 only has GPIO14 connected)
+ * Add full support for Sonoff dual
+ * 
+ * 1.0.35 20160929
+ * Add more lines to console
+ * Add timeout and disable MQTT on web upload
+ * Add command SAVEDATA to control parameter save (for flash wear afficionados)
+ *
+ * 1.0.34 20160926
+ * Fix button press six and seven
+ * Add more information to webserver
+ *
+ * 1.0.33 20160915
  * Better WPS error message
  * Separate webserver code from support.ino into webserver.ino
  * Fix webserver User by removing unwanted restart option
