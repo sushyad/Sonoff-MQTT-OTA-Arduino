@@ -23,6 +23,9 @@ uint32_t getHash()
   return hash;  
 }
 
+/*********************************************************************************************\
+ * Config Save - Save parameters to Flash or Spiffs ONLY if any parameter has changed
+\*********************************************************************************************/
 void CFG_Save()
 {
   char log[LOGSZ];
@@ -268,7 +271,10 @@ void WIFI_check_ip()
         break;
       default:
         addLog_P(LOG_LEVEL_DEBUG, PSTR("Wifi: STATION_IDLE"));
-        if (_wifiretry == (WIFI_RETRY / 2)) WiFi.begin();
+        if ((_wifiretry == (WIFI_RETRY / 2)) && (WiFi.status() != WL_CONNECTED)) {
+//          WiFi.begin();
+          WiFi.begin(sysCfg.sta_ssid, sysCfg.sta_pwd);
+        }
         _wifiretry--;
         if (_wifiretry) {
           _wificounter = 1;
@@ -342,12 +348,16 @@ void WIFI_Connect(char *Hostname)
   char log[LOGSZ];
 
   WiFi.persistent(false);   // Solve possible wifi init errors
-  WiFi.setAutoConnect(true);
+//  WiFi.setAutoConnect(true);
+  if (!strncmp(ESP.getSdkVersion(),"1.5.3",5)) {
+    addLog_P(LOG_LEVEL_DEBUG, "Wifi: Patch issue 2186");
+    WiFi.mode(WIFI_OFF);    // See https://github.com/esp8266/Arduino/issues/2186
+  }
   WiFi.mode(WIFI_STA);      // Disable AP mode
   WiFi.hostname(Hostname);
+  WiFi.begin(sysCfg.sta_ssid, sysCfg.sta_pwd);
   snprintf_P(log, sizeof(log), PSTR("Wifi: Connecting to %s (%s) as %s"), sysCfg.sta_ssid, sysCfg.sta_pwd, Hostname);
   addLog(LOG_LEVEL_INFO, log);
-  WiFi.begin(sysCfg.sta_ssid, sysCfg.sta_pwd);
   _wifiretry = WIFI_RETRY;
   _wificounter = 1;
 }
@@ -843,9 +853,7 @@ void addLog(byte loglevel, const char *line)
 #ifdef DEBUG_ESP_PORT
   DEBUG_ESP_PORT.printf("%s %s\n", mxtime, line);  
 #endif  // DEBUG_ESP_PORT
-#ifdef USE_SERIAL
   if (loglevel <= sysCfg.seriallog_level) Serial.printf("%s %s\n", mxtime, line);
-#endif  // USE_SERIAL
 #ifdef USE_WEBSERVER
   if (loglevel <= sysCfg.weblog_level) {
     Log[logidx] = String(mxtime) + " " + String(line);
